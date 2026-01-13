@@ -3,13 +3,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-bool json_is_whitespace(char *);
-void json_skip_whitespace(char **);
-
 typedef enum {
   JSON_TYPE_OBJ,
   JSON_TYPE_ARR,
   JSON_TYPE_STR,
+  JSON_TYPE_INT,
+  JSON_TYPE_DBL,
+  JSON_TYPE_BOL,
 } JsonType;
 
 typedef struct {
@@ -18,9 +18,13 @@ typedef struct {
 } JsonStr;
 
 typedef struct {
-  JsonStr *key;
-  void *value;
-  JsonType value_type;
+  void *ptr;
+  JsonType type;
+} JsonVal;
+
+typedef struct {
+  JsonStr key;
+  JsonVal value;
 } JsonPair;
 
 typedef struct {
@@ -28,6 +32,9 @@ typedef struct {
   size_t len;
 } JsonObj;
 
-JsonObj json_parse_obj(char *);
-JsonPair json_parse_pair(char **);
-JsonStr json_parse_str(char **);
+typedef struct {
+  JsonVal *values;
+  size_t len;
+} JsonArr;
+
+JsonObj json_parse_obj(char **);
