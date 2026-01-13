@@ -5,18 +5,14 @@
 
 static char TRUE_STR[] = "true";
 static char FALSE_STR[] = "false";
+static char NULL_STR[] = "null";
 
 static JsonPair json_parse_pair(char **);
 static JsonStr json_parse_str(char **);
 static JsonArr json_parse_arr(char **);
 static JsonVal json_parse_val(char **);
 
-// static bool json_is_whitespace(char *ptr) {
-//   return *ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n';
-// }
-
 static void json_skip_whitespace(char **ptr) {
-  // while (json_is_whitespace(*ptr))
   while (isspace(**ptr))
     (*ptr)++;
 }
@@ -183,6 +179,10 @@ static JsonVal json_parse_val(char **text) {
     *(bool *)res.ptr = false;
     res.type = JSON_TYPE_BOL;
     (*text) += sizeof(FALSE_STR) - 2;
+  } else if (0 == memcmp(*text, NULL_STR, sizeof(NULL_STR) - 1)) {
+    res.ptr = NULL;
+    res.type = JSON_TYPE_NUL;
+    (*text) += sizeof(NULL_STR) - 2;
   } else {
     assert(false);
   }

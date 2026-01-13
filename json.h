@@ -10,6 +10,7 @@ typedef enum {
   JSON_TYPE_INT,
   JSON_TYPE_DBL,
   JSON_TYPE_BOL,
+  JSON_TYPE_NUL,
 } JsonType;
 
 typedef struct {
