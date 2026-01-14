@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 int main(void) {
@@ -13,8 +14,18 @@ int main(void) {
   fread(f_content, sizeof(char), f_size, f);
 
   JsonObj *obj;
+
+  float st = (float)clock() / CLOCKS_PER_SEC;
   json_parse_obj(&obj, &f_content);
+  float et = (float)clock() / CLOCKS_PER_SEC;
+  float dt = et - st;
+  printf("Delta time is %f\n", dt);
+
+  st = (float)clock() / CLOCKS_PER_SEC;
   json_free_obj(obj);
+  et = (float)clock() / CLOCKS_PER_SEC;
+  dt = et - st;
+  printf("Freeing delta time is %f\n", dt);
   // printf("Key1 is '%.*s'\n", obj.pairs[0].key.len, obj.pairs[0].key.start);
   // JsonStr *str1 = obj.pairs[0].value.ptr;
   // printf("Value1 is '%.*s'\n", str1->len, str1->start);
