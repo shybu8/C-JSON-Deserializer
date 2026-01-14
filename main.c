@@ -12,7 +12,9 @@ int main(void) {
   char *f_content = malloc(f_size);
   fread(f_content, sizeof(char), f_size, f);
 
-  JsonObj obj = json_parse_obj(&f_content);
+  JsonObj *obj;
+  json_parse_obj(&obj, &f_content);
+  json_free_obj(obj);
   // printf("Key1 is '%.*s'\n", obj.pairs[0].key.len, obj.pairs[0].key.start);
   // JsonStr *str1 = obj.pairs[0].value.ptr;
   // printf("Value1 is '%.*s'\n", str1->len, str1->start);

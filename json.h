@@ -38,4 +38,5 @@ typedef struct {
   size_t len;
 } JsonArr;
 
-JsonObj json_parse_obj(char **);
+void json_parse_obj(JsonObj **, char **);
+void json_free_obj(JsonObj *);

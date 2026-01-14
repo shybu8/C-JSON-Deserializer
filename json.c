@@ -23,26 +23,24 @@ static void json_skip_digits(char **ptr) {
   }
 }
 
-JsonObj json_parse_obj(char **text) {
-  JsonObj res = {
-      .pairs = NULL,
-      .len = 0,
-  };
+void json_parse_obj(JsonObj **res, char **text) {
+  *res = malloc(sizeof(JsonObj));
   assert(**text == '{');
   (*text)++;
   json_skip_whitespace(text);
   size_t actual_len = 0;
   while (**text != '}') {
     if (actual_len == 0) {
-      res.pairs = malloc(sizeof(JsonPair) * 2);
+      (*res)->pairs = malloc(sizeof(JsonPair) * 2);
       actual_len = 2;
-      res.len = 1;
-    } else if (res.len == actual_len) {
-      res.pairs = realloc(res.pairs, sizeof(JsonPair) * (actual_len * 2));
+      (*res)->len = 0;
+    } else if ((*res)->len == actual_len) {
+      (*res)->pairs =
+          realloc((*res)->pairs, sizeof(JsonPair) * (actual_len * 2));
       actual_len *= 2;
-      res.len += 1;
     }
-    res.pairs[res.len - 1] = json_parse_pair(text);
+    (*res)->len += 1;
+    (*res)->pairs[(*res)->len - 1] = json_parse_pair(text);
     if (**text != ',') {
       json_skip_whitespace(text);
       break;
@@ -53,7 +51,6 @@ JsonObj json_parse_obj(char **text) {
   }
   assert(**text == '}');
   (*text)++;
-  return res;
 }
 
 static JsonStr json_parse_str(char **text) {
@@ -105,12 +102,11 @@ static JsonArr json_parse_arr(char **text) {
     if (actual_len == 0) {
       res.values = malloc(sizeof(JsonVal) * 2);
       actual_len = 2;
-      res.len = 1;
     } else if (res.len == actual_len) {
       res.values = realloc(res.values, sizeof(JsonVal) * (actual_len * 2));
       actual_len *= 2;
-      res.len += 1;
     }
+    res.len += 1;
 
     res.values[res.len - 1] = json_parse_val(text);
     if (**text == ',') {
@@ -142,8 +138,7 @@ static JsonVal json_parse_val(char **text) {
     *(JsonStr *)res.ptr = json_parse_str(text);
     res.type = JSON_TYPE_STR;
   } else if (**text == '{') {
-    res.ptr = malloc(sizeof(JsonObj));
-    *(JsonObj *)res.ptr = json_parse_obj(text);
+    json_parse_obj((JsonObj **)&res.ptr, text);
     res.type = JSON_TYPE_OBJ;
   } else if (**text == '[') {
     res.ptr = malloc(sizeof(JsonArr));
@@ -184,4 +179,41 @@ static JsonVal json_parse_val(char **text) {
     assert(false);
   }
   return res;
+}
+
+void json_free_arr(JsonArr *);
+
+void json_free_val(JsonVal *val) {
+  switch (val->type) {
+  case JSON_TYPE_OBJ:
+    json_free_obj(val->ptr);
+    break;
+  case JSON_TYPE_ARR:
+    json_free_arr(val->ptr);
+    break;
+  case JSON_TYPE_NUL:
+    break; // Nothing
+  case JSON_TYPE_STR:
+  case JSON_TYPE_INT:
+  case JSON_TYPE_DBL:
+  case JSON_TYPE_BOL:
+    free(val->ptr);
+    break;
+  }
+}
+
+void json_free_obj(JsonObj *obj) {
+  for (size_t i = 0; i < obj->len; i++) {
+    json_free_val(&obj->pairs[i].value);
+  }
+  free(obj->pairs);
+  free(obj);
+}
+
+void json_free_arr(JsonArr *arr) {
+  for (size_t i = 0; i < arr->len; i++) {
+    json_free_val(&arr->values[i]);
+  }
+  free(arr->values);
+  free(arr);
 }
