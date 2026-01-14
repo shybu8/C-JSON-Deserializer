@@ -17,12 +17,6 @@ static void json_skip_whitespace(char **ptr) {
     (*ptr)++;
 }
 
-static void json_skip_digits(char **ptr) {
-  while (isdigit(**ptr)) {
-    (*ptr)++;
-  }
-}
-
 void json_parse_obj(JsonObj **res, char **text) {
   *res = malloc(sizeof(JsonObj));
   assert(**text == '{');
@@ -41,14 +35,15 @@ void json_parse_obj(JsonObj **res, char **text) {
     }
     (*res)->len += 1;
     (*res)->pairs[(*res)->len - 1] = json_parse_pair(text);
-    if (**text != ',') {
-      json_skip_whitespace(text);
-      break;
-    } else {
+
+    json_skip_whitespace(text);
+    if (**text == ',') {
       (*text)++;
       json_skip_whitespace(text);
-    }
+    } else
+      break;
   }
+  json_skip_whitespace(text);
   assert(**text == '}');
   (*text)++;
 }
@@ -181,9 +176,9 @@ static JsonVal json_parse_val(char **text) {
   return res;
 }
 
-void json_free_arr(JsonArr *);
+static void json_free_arr(JsonArr *);
 
-void json_free_val(JsonVal *val) {
+static void json_free_val(JsonVal *val) {
   switch (val->type) {
   case JSON_TYPE_OBJ:
     json_free_obj(val->ptr);
@@ -210,7 +205,7 @@ void json_free_obj(JsonObj *obj) {
   free(obj);
 }
 
-void json_free_arr(JsonArr *arr) {
+static void json_free_arr(JsonArr *arr) {
   for (size_t i = 0; i < arr->len; i++) {
     json_free_val(&arr->values[i]);
   }
