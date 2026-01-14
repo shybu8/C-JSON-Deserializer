@@ -40,7 +40,6 @@ JsonObj json_parse_obj(char **text) {
       res.len += 1;
     }
     res.pairs[res.len - 1] = json_parse_pair(text);
-    (*text)++;
     if (**text != ',') {
       json_skip_whitespace(text);
       break;
@@ -50,6 +49,7 @@ JsonObj json_parse_obj(char **text) {
     }
   }
   assert(**text == '}');
+  (*text)++;
   return res;
 }
 
@@ -62,12 +62,12 @@ static JsonStr json_parse_str(char **text) {
     (*text)++;
   str.len = *text - str.start;
   assert(**text == '"');
+  (*text)++;
   return str;
 }
 
 static JsonPair json_parse_pair(char **text) {
   JsonStr key = json_parse_str(text);
-  (*text)++;
 
   json_skip_whitespace(text);
   assert(**text == ':');
@@ -100,16 +100,15 @@ static JsonArr json_parse_arr(char **text) {
     }
 
     res.values[res.len - 1] = json_parse_val(text);
-    (*text)++;
-    if (**text != ',') {
-      json_skip_whitespace(text);
-      break;
-    } else {
+    if (**text == ',') {
       (*text)++;
       json_skip_whitespace(text);
-    }
+    } else
+      break;
   }
+  json_skip_whitespace(text);
   assert(**text == ']');
+  (*text)++;
   return res;
 }
 
@@ -130,10 +129,13 @@ static void skip_fractional(char **text) {
     (*text)++;
   while (isdigit(**text))
     (*text)++;
-  if (**text == 'e' || **text == 'E')
+  if (**text == 'e' || **text == 'E') {
     (*text)++;
-  while (isdigit(**text))
-    (*text)++;
+    if (**text == '+' || **text == '-')
+      (*text)++;
+    while (isdigit(**text))
+      (*text)++;
+  }
 }
 
 static JsonVal json_parse_val(char **text) {
@@ -152,37 +154,37 @@ static JsonVal json_parse_val(char **text) {
     res.ptr = malloc(sizeof(JsonArr));
     *(JsonArr *)res.ptr = json_parse_arr(text);
     res.type = JSON_TYPE_ARR;
-  } else if (isdigit(**text) || **text == '-' && isdigit(*(*text)++)) {
+  } else if (isdigit(**text) || **text == '-' && isdigit(*(*text + 1))) {
+    char *end;
     if (is_fractional(*text)) {
       // Double (maybe exponential)
       res.ptr = malloc(sizeof(double));
-      *(double *)res.ptr = strtod(*text, NULL);
+      *(double *)res.ptr = strtod(*text, &end);
       res.type = JSON_TYPE_DBL;
-      // TODO: Skip fractional number
-      skip_fractional(text);
     } else {
       // Integer
       res.ptr = malloc(sizeof(long long));
-      *(long long *)res.ptr = strtoll(*text, NULL, 10);
+      *(long long *)res.ptr = strtoll(*text, &end, 10);
       res.type = JSON_TYPE_INT;
-      while (isdigit(**text))
-        (*text)++;
-      (*text)--;
     }
+    *text = end;
   } else if (0 == memcmp(*text, TRUE_STR, sizeof(TRUE_STR) - 1)) {
+    // Bool: true
     res.ptr = malloc(sizeof(bool));
     *(bool *)res.ptr = true;
     res.type = JSON_TYPE_BOL;
-    (*text) += sizeof(TRUE_STR) - 2;
+    (*text) += sizeof(TRUE_STR) - 1;
   } else if (0 == memcmp(*text, FALSE_STR, sizeof(FALSE_STR) - 1)) {
+    // Bool: false
     res.ptr = malloc(sizeof(bool));
     *(bool *)res.ptr = false;
     res.type = JSON_TYPE_BOL;
-    (*text) += sizeof(FALSE_STR) - 2;
+    (*text) += sizeof(FALSE_STR) - 1;
   } else if (0 == memcmp(*text, NULL_STR, sizeof(NULL_STR) - 1)) {
+    // Null
     res.ptr = NULL;
     res.type = JSON_TYPE_NUL;
-    (*text) += sizeof(NULL_STR) - 2;
+    (*text) += sizeof(NULL_STR) - 1;
   } else {
     assert(false);
   }
