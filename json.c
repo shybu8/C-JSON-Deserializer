@@ -61,8 +61,15 @@ static JsonStr json_parse_str(char **text) {
   JsonStr str = {
       .start = ++*text,
   };
-  while (**text != '"')
-    (*text)++;
+  bool esc = false;
+  for (;; (*text)++) {
+    if (!esc) {
+      if (**text == '"')
+        break;
+      esc = **text == '\\';
+    } else
+      esc = false;
+  }
   str.len = *text - str.start;
   assert(**text == '"');
   (*text)++;
@@ -124,24 +131,6 @@ static bool is_fractional(char *num) {
   while (isdigit(*num))
     num++;
   return *num == '.' && isdigit(*(++num));
-}
-
-static void skip_fractional(char **text) {
-  if (**text == '-')
-    (*text)++;
-  while (isdigit(**text))
-    (*text)++;
-  if (**text == '.')
-    (*text)++;
-  while (isdigit(**text))
-    (*text)++;
-  if (**text == 'e' || **text == 'E') {
-    (*text)++;
-    if (**text == '+' || **text == '-')
-      (*text)++;
-    while (isdigit(**text))
-      (*text)++;
-  }
 }
 
 static JsonVal json_parse_val(char **text) {
