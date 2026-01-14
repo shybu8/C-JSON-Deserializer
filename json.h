@@ -8,7 +8,7 @@ typedef enum {
   JSON_TYPE_ARR,
   JSON_TYPE_STR,
   JSON_TYPE_INT,
-  JSON_TYPE_DBL,
+  JSON_TYPE_FRC,
   JSON_TYPE_BOL,
   JSON_TYPE_NUL,
 } JsonType;
@@ -18,8 +18,19 @@ typedef struct {
   size_t len;
 } JsonStr;
 
+typedef struct JsonObj JsonObj;
+typedef struct JsonArr JsonArr;
+
 typedef struct {
-  void *ptr;
+  // void *ptr;
+  union {
+    JsonObj *obj_ptr;
+    JsonArr *arr_ptr;
+    JsonStr *str_ptr;
+    long long integer;
+    double fract;
+    bool boolean;
+  } as;
   JsonType type;
 } JsonVal;
 
@@ -28,15 +39,15 @@ typedef struct {
   JsonVal value;
 } JsonPair;
 
-typedef struct {
+struct JsonObj {
   JsonPair *pairs;
   size_t len;
-} JsonObj;
+};
 
-typedef struct {
+struct JsonArr {
   JsonVal *values;
   size_t len;
-} JsonArr;
+};
 
 void json_parse_obj(JsonObj **, char **);
 void json_free_obj(JsonObj *);

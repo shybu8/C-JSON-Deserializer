@@ -9,16 +9,19 @@ static char NULL_STR[] = "null";
 
 static JsonPair json_parse_pair(char **);
 static JsonStr json_parse_str(char **);
-static JsonArr json_parse_arr(char **);
+static void json_parse_arr(JsonArr **, char **);
 static JsonVal json_parse_val(char **);
 
 static void json_skip_whitespace(char **ptr) {
-  while (isspace(**ptr))
+  while (isspace((unsigned char)**ptr))
     (*ptr)++;
 }
 
 void json_parse_obj(JsonObj **res, char **text) {
   *res = malloc(sizeof(JsonObj));
+  (*res)->pairs = NULL;
+  (*res)->len = 0;
+
   assert(**text == '{');
   (*text)++;
   json_skip_whitespace(text);
@@ -27,7 +30,6 @@ void json_parse_obj(JsonObj **res, char **text) {
     if (actual_len == 0) {
       (*res)->pairs = malloc(sizeof(JsonPair) * 2);
       actual_len = 2;
-      (*res)->len = 0;
     } else if ((*res)->len == actual_len) {
       (*res)->pairs =
           realloc((*res)->pairs, sizeof(JsonPair) * (actual_len * 2));
@@ -85,25 +87,26 @@ static JsonPair json_parse_pair(char **text) {
   return res;
 }
 
-static JsonArr json_parse_arr(char **text) {
-  JsonArr res = {
-      .values = NULL,
-      .len = 0,
-  };
+static void json_parse_arr(JsonArr **res, char **text) {
+  *res = malloc(sizeof(JsonArr));
+  (*res)->values = NULL;
+  (*res)->len = 0;
+
   (*text)++;
   json_skip_whitespace(text);
   size_t actual_len = 0;
   while (**text != ']') {
     if (actual_len == 0) {
-      res.values = malloc(sizeof(JsonVal) * 2);
+      (*res)->values = malloc(sizeof(JsonVal) * 2);
       actual_len = 2;
-    } else if (res.len == actual_len) {
-      res.values = realloc(res.values, sizeof(JsonVal) * (actual_len * 2));
+    } else if ((*res)->len == actual_len) {
+      (*res)->values =
+          realloc((*res)->values, sizeof(JsonVal) * (actual_len * 2));
       actual_len *= 2;
     }
-    res.len += 1;
+    (*res)->len += 1;
 
-    res.values[res.len - 1] = json_parse_val(text);
+    (*res)->values[(*res)->len - 1] = json_parse_val(text);
     if (**text == ',') {
       (*text)++;
       json_skip_whitespace(text);
@@ -113,61 +116,53 @@ static JsonArr json_parse_arr(char **text) {
   json_skip_whitespace(text);
   assert(**text == ']');
   (*text)++;
-  return res;
 }
 
 static bool is_fractional(char *num) {
   if (*num == '-')
     num++;
-  while (isdigit(*num))
+  while (isdigit((unsigned char)*num))
     num++;
-  return *num == '.' && isdigit(*(++num));
+  return *num == '.' && isdigit((unsigned char)*(++num));
 }
 
 static JsonVal json_parse_val(char **text) {
-  JsonVal res = {
-      .ptr = NULL,
-  };
+  JsonVal res = {};
   if (**text == '"') {
-    res.ptr = malloc(sizeof(JsonStr));
-    *(JsonStr *)res.ptr = json_parse_str(text);
+    res.as.str_ptr = malloc(sizeof(JsonStr));
+    *res.as.str_ptr = json_parse_str(text);
     res.type = JSON_TYPE_STR;
   } else if (**text == '{') {
-    json_parse_obj((JsonObj **)&res.ptr, text);
+    json_parse_obj(&res.as.obj_ptr, text);
     res.type = JSON_TYPE_OBJ;
   } else if (**text == '[') {
-    res.ptr = malloc(sizeof(JsonArr));
-    *(JsonArr *)res.ptr = json_parse_arr(text);
+    json_parse_arr(&res.as.arr_ptr, text);
     res.type = JSON_TYPE_ARR;
-  } else if (isdigit(**text) || **text == '-' && isdigit(*(*text + 1))) {
+  } else if (isdigit((unsigned char)**text) ||
+             **text == '-' && isdigit((unsigned char)*(*text + 1))) {
     char *end;
     if (is_fractional(*text)) {
       // Double (maybe exponential)
-      res.ptr = malloc(sizeof(double));
-      *(double *)res.ptr = strtod(*text, &end);
-      res.type = JSON_TYPE_DBL;
+      res.as.fract = strtod(*text, &end);
+      res.type = JSON_TYPE_FRC;
     } else {
       // Integer
-      res.ptr = malloc(sizeof(long long));
-      *(long long *)res.ptr = strtoll(*text, &end, 10);
+      res.as.integer = strtoll(*text, &end, 10);
       res.type = JSON_TYPE_INT;
     }
     *text = end;
   } else if (0 == memcmp(*text, TRUE_STR, sizeof(TRUE_STR) - 1)) {
     // Bool: true
-    res.ptr = malloc(sizeof(bool));
-    *(bool *)res.ptr = true;
+    res.as.boolean = true;
     res.type = JSON_TYPE_BOL;
     (*text) += sizeof(TRUE_STR) - 1;
   } else if (0 == memcmp(*text, FALSE_STR, sizeof(FALSE_STR) - 1)) {
     // Bool: false
-    res.ptr = malloc(sizeof(bool));
-    *(bool *)res.ptr = false;
+    res.as.boolean = false;
     res.type = JSON_TYPE_BOL;
     (*text) += sizeof(FALSE_STR) - 1;
   } else if (0 == memcmp(*text, NULL_STR, sizeof(NULL_STR) - 1)) {
     // Null
-    res.ptr = NULL;
     res.type = JSON_TYPE_NUL;
     (*text) += sizeof(NULL_STR) - 1;
   } else {
@@ -181,19 +176,19 @@ static void json_free_arr(JsonArr *);
 static void json_free_val(JsonVal *val) {
   switch (val->type) {
   case JSON_TYPE_OBJ:
-    json_free_obj(val->ptr);
+    json_free_obj(val->as.obj_ptr);
     break;
   case JSON_TYPE_ARR:
-    json_free_arr(val->ptr);
+    json_free_arr(val->as.arr_ptr);
+    break;
+  case JSON_TYPE_STR:
+    free(val->as.str_ptr);
     break;
   case JSON_TYPE_NUL:
-    break; // Nothing
-  case JSON_TYPE_STR:
   case JSON_TYPE_INT:
-  case JSON_TYPE_DBL:
+  case JSON_TYPE_FRC:
   case JSON_TYPE_BOL:
-    free(val->ptr);
-    break;
+    break; // Nothing
   }
 }
 
