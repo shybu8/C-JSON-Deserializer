@@ -31,12 +31,15 @@ JsonObj json_parse_obj(char **text) {
   assert(**text == '{');
   (*text)++;
   json_skip_whitespace(text);
+  size_t actual_len = 0;
   while (**text != '}') {
-    if (res.len == 0) {
-      res.pairs = malloc(sizeof(JsonPair));
+    if (actual_len == 0) {
+      res.pairs = malloc(sizeof(JsonPair) * 2);
+      actual_len = 2;
       res.len = 1;
-    } else {
-      res.pairs = realloc(res.pairs, sizeof(JsonPair) * (res.len + 1));
+    } else if (res.len == actual_len) {
+      res.pairs = realloc(res.pairs, sizeof(JsonPair) * (actual_len * 2));
+      actual_len *= 2;
       res.len += 1;
     }
     res.pairs[res.len - 1] = json_parse_pair(text);
@@ -90,12 +93,15 @@ static JsonArr json_parse_arr(char **text) {
   };
   (*text)++;
   json_skip_whitespace(text);
+  size_t actual_len = 0;
   while (**text != ']') {
-    if (res.len == 0) {
-      res.values = malloc(sizeof(JsonVal));
+    if (actual_len == 0) {
+      res.values = malloc(sizeof(JsonVal) * 2);
+      actual_len = 2;
       res.len = 1;
-    } else {
-      res.values = realloc(res.values, sizeof(JsonVal) * (res.len + 1));
+    } else if (res.len == actual_len) {
+      res.values = realloc(res.values, sizeof(JsonVal) * (actual_len * 2));
+      actual_len *= 2;
       res.len += 1;
     }
 
