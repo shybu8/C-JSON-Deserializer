@@ -13,16 +13,18 @@ typedef enum {
   JSON_TYPE_NUL,
 } JsonType;
 
-typedef struct {
-  char *start;
-  size_t len;
-} JsonStr;
-
+typedef struct JsonStr JsonStr;
 typedef struct JsonObj JsonObj;
 typedef struct JsonArr JsonArr;
+typedef struct JsonVal JsonVal;
+typedef struct JsonPair JsonPair;
 
-typedef struct {
-  // void *ptr;
+struct JsonStr {
+  char *start;
+  size_t len;
+};
+
+struct JsonVal {
   union {
     JsonObj *obj_ptr;
     JsonArr *arr_ptr;
@@ -32,12 +34,12 @@ typedef struct {
     bool boolean;
   } as;
   JsonType type;
-} JsonVal;
+};
 
-typedef struct {
+struct JsonPair {
   JsonStr key;
   JsonVal value;
-} JsonPair;
+};
 
 struct JsonObj {
   JsonPair *pairs;
@@ -49,5 +51,5 @@ struct JsonArr {
   size_t len;
 };
 
-void json_parse_obj(JsonObj **, char **);
+bool json_parse_obj(JsonObj **, char **);
 void json_free_obj(JsonObj *);

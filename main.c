@@ -16,6 +16,7 @@ int main(void) {
   JsonObj *obj;
 
   float st = (float)clock() / CLOCKS_PER_SEC;
+  // assert(json_parse_obj(&obj, &f_content));
   json_parse_obj(&obj, &f_content);
   float et = (float)clock() / CLOCKS_PER_SEC;
   float dt = et - st;
