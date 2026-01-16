@@ -21,52 +21,52 @@ bool json_parse_obj(JsonObj **res, char **text) {
   *res = malloc(sizeof(JsonObj));
   (*res)->pairs = NULL;
   (*res)->len = 0;
+  size_t actual_len = 2;
+  (*res)->pairs = malloc(sizeof(JsonPair) * actual_len);
 
-  // assert(**text == '{');
   if (**text != '{')
     return false;
+
   (*text)++;
   json_skip_whitespace(text);
-  size_t actual_len = 0;
-  while (**text != '}') {
-    if (actual_len == 0) {
-      (*res)->pairs = malloc(sizeof(JsonPair) * 2);
-      actual_len = 2;
-    } else if ((*res)->len == actual_len) {
-      (*res)->pairs =
-          realloc((*res)->pairs, sizeof(JsonPair) * (actual_len * 2));
-      actual_len *= 2;
-    }
-    // TODO: Increment only after successfull parsing
-    (*res)->len += 1;
-    if (!json_parse_pair(&(*res)->pairs[(*res)->len - 1], text))
-      return false;
+  if (**text != '}')
+    for (;;) {
+      if ((*res)->len == actual_len) {
+        (*res)->pairs =
+            realloc((*res)->pairs, sizeof(JsonPair) * (actual_len * 2));
+        actual_len *= 2;
+      }
 
-    json_skip_whitespace(text);
-    if (**text == ',') {
-      (*text)++;
+      (*res)->len += 1;
+      if (!json_parse_pair(&(*res)->pairs[(*res)->len - 1], text))
+        return false;
+
       json_skip_whitespace(text);
-    } else
-      break;
-  }
+      if (**text == ',') {
+        (*text)++;
+        json_skip_whitespace(text);
+      } else
+        break;
+    }
   json_skip_whitespace(text);
-  // assert(**text == '}');
+
   if (**text != '}')
     return false;
+
   (*text)++;
   return true;
 }
 
 static bool json_parse_str(JsonStr *str, char **text) {
-  // assert(**text == '"');
   if (**text != '"')
     return false;
-  // JsonStr str = {
-  //     .start = ++*text,
-  // };
+
   str->start = ++*text;
   bool esc = false;
+  bool needs_decoding = false;
   for (;; (*text)++) {
+    if (**text == '\0')
+      return false;
     if (!esc) {
       if (**text == '"')
         break;
@@ -75,37 +75,28 @@ static bool json_parse_str(JsonStr *str, char **text) {
       esc = false;
   }
   str->len = *text - str->start;
-  // assert(**text == '"');
+
   if (**text != '"')
     return false;
+
   (*text)++;
-  // return str;
   return true;
 }
 
 static bool json_parse_pair(JsonPair *res, char **text) {
-  JsonStr key;
-  if (!json_parse_str(&key, text))
+  if (!json_parse_str(&res->key, text))
     return false;
 
   json_skip_whitespace(text);
-  // assert(**text == ':');
+
   if (**text != ':')
     return false;
+
   (*text)++;
   json_skip_whitespace(text);
 
-  JsonVal value;
-  if (!json_parse_val(&value, text))
+  if (!json_parse_val(&res->value, text))
     return false;
-
-  // JsonPair res = {
-  //     .key = key,
-  //     .value = value,
-  // };
-  // return res;
-  res->key = key;
-  res->value = value;
   return true;
 }
 
@@ -113,34 +104,37 @@ static bool json_parse_arr(JsonArr **res, char **text) {
   *res = malloc(sizeof(JsonArr));
   (*res)->values = NULL;
   (*res)->len = 0;
+  size_t actual_len = 2;
+  (*res)->values = malloc(sizeof(JsonVal) * actual_len);
+
+  if (**text != '[')
+    return false;
 
   (*text)++;
   json_skip_whitespace(text);
-  size_t actual_len = 0;
-  while (**text != ']') {
-    if (actual_len == 0) {
-      (*res)->values = malloc(sizeof(JsonVal) * 2);
-      actual_len = 2;
-    } else if ((*res)->len == actual_len) {
-      (*res)->values =
-          realloc((*res)->values, sizeof(JsonVal) * (actual_len * 2));
-      actual_len *= 2;
+  if (**text != ']')
+    for (;;) {
+      if ((*res)->len == actual_len) {
+        (*res)->values =
+            realloc((*res)->values, sizeof(JsonVal) * (actual_len * 2));
+        actual_len *= 2;
+      }
+
+      (*res)->len += 1;
+      if (!json_parse_val(&(*res)->values[(*res)->len - 1], text))
+        return false;
+
+      if (**text == ',') {
+        (*text)++;
+        json_skip_whitespace(text);
+      } else
+        break;
     }
-    (*res)->len += 1;
-    // TODO: Increment only after successfull parsing
-    // (*res)->values[(*res)->len - 1] = json_parse_val(text);
-    if (!json_parse_val(&(*res)->values[(*res)->len - 1], text))
-      return false;
-    if (**text == ',') {
-      (*text)++;
-      json_skip_whitespace(text);
-    } else
-      break;
-  }
   json_skip_whitespace(text);
-  // assert(**text == ']');
+
   if (**text != ']')
     return false;
+
   (*text)++;
   return true;
 }
@@ -154,20 +148,21 @@ static bool is_fractional(char *num) {
 }
 
 static bool json_parse_val(JsonVal *res, char **text) {
-  // JsonVal res = {};
   if (**text == '"') {
     res->as.str_ptr = malloc(sizeof(JsonStr));
-    // *res.as.str_ptr = json_parse_str(text);
-    if (!json_parse_str(res->as.str_ptr, text))
-      return false;
     res->type = JSON_TYPE_STR;
+    if (!json_parse_str(res->as.str_ptr, text)) {
+      free(res->as.str_ptr);
+      return false;
+    }
   } else if (**text == '{') {
-    json_parse_obj(&res->as.obj_ptr, text);
     res->type = JSON_TYPE_OBJ;
+    if (!json_parse_obj(&res->as.obj_ptr, text))
+      return false;
   } else if (**text == '[') {
+    res->type = JSON_TYPE_ARR;
     if (!json_parse_arr(&res->as.arr_ptr, text))
       return false;
-    res->type = JSON_TYPE_ARR;
   } else if (isdigit((unsigned char)**text) ||
              (**text == '-' && isdigit((unsigned char)*(*text + 1)))) {
     char *end;
@@ -199,7 +194,6 @@ static bool json_parse_val(JsonVal *res, char **text) {
     return false;
   }
   return true;
-  // return res;
 }
 
 static void json_free_arr(JsonArr *);
