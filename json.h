@@ -21,6 +21,7 @@ typedef struct JsonPair JsonPair;
 struct JsonStr {
   char *start;
   size_t len;
+  bool needs_dealloc;
 };
 
 struct JsonVal {
@@ -52,3 +53,4 @@ struct JsonArr {
 
 bool json_parse_obj(JsonObj **, char **);
 void json_free_obj(JsonObj *);
+bool json_decode_str(char **, size_t *, char *, size_t);
