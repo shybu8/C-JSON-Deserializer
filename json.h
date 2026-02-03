@@ -52,5 +52,7 @@ struct JsonArr {
 };
 
 bool json_parse_val(JsonVal *, const char **);
-void json_free_val(JsonVal *val);
+void json_free_val(JsonVal *);
 bool json_decode_str(const char **, size_t *, char *, size_t);
+
+JsonVal *json_value_by_key(JsonObj *, char *);

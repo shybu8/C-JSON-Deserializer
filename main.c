@@ -23,6 +23,11 @@ int main(void) {
   printf("Delta time is %f\n", dt);
 
   printf("Value is %d\n", val.type);
+  if (val.type == JSON_TYPE_OBJ) {
+    JsonVal *found = json_value_by_key(val.as.obj_ptr, "1");
+    if (found && found->type == JSON_TYPE_STR)
+      printf("%.*s\n", (int)found->as.str_ptr->len, found->as.str_ptr->start);
+  }
 
   st = (float)clock() / CLOCKS_PER_SEC;
   json_free_val(&val);
