@@ -51,6 +51,6 @@ struct JsonArr {
   size_t len;
 };
 
-bool json_parse_obj(JsonObj **, const char **);
-void json_free_obj(JsonObj *);
+bool json_parse_val(JsonVal *, const char **);
+void json_free_val(JsonVal *val);
 bool json_decode_str(const char **, size_t *, char *, size_t);

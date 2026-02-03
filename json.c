@@ -14,14 +14,14 @@ static char NULL_STR[] = "null";
 static bool json_parse_pair(JsonPair *, const char **);
 static bool json_parse_str(JsonStr *, const char **);
 static bool json_parse_arr(JsonArr **, const char **);
-static bool json_parse_val(JsonVal *, const char **);
+// bool json_parse_val(JsonVal *, const char **);
 
 static void json_skip_whitespace(const char **ptr) {
   while (isspace((unsigned char)**ptr))
     (*ptr)++;
 }
 
-bool json_parse_obj(JsonObj **res, const char **text) {
+static bool json_parse_obj(JsonObj **res, const char **text) {
   *res = malloc(sizeof(JsonObj));
   (*res)->pairs = NULL;
   (*res)->len = 0;
@@ -180,7 +180,7 @@ static NumResult is_fractional(const char *text) {
   return NUM_INT;
 }
 
-static bool json_parse_val(JsonVal *res, const char **text) {
+bool json_parse_val(JsonVal *res, const char **text) {
   res->type = JSON_TYPE_NUL;
   if (**text == '"') {
     res->as.str_ptr = malloc(sizeof(JsonStr));
@@ -363,9 +363,10 @@ bool json_decode_str(const char **res, size_t *res_len, char *src, size_t len) {
   return true;
 }
 
+static void json_free_obj(JsonObj *);
 static void json_free_arr(JsonArr *);
 
-static void json_free_val(JsonVal *val) {
+void json_free_val(JsonVal *val) {
   switch (val->type) {
   case JSON_TYPE_OBJ:
     json_free_obj(val->as.obj_ptr);
@@ -386,7 +387,7 @@ static void json_free_val(JsonVal *val) {
   }
 }
 
-void json_free_obj(JsonObj *obj) {
+static void json_free_obj(JsonObj *obj) {
   for (size_t i = 0; i < obj->len; i++) {
     if (obj->pairs[i].key.needs_dealloc)
       free(obj->pairs[i].key.start);
