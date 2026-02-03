@@ -11,17 +11,17 @@ static char TRUE_STR[] = "true";
 static char FALSE_STR[] = "false";
 static char NULL_STR[] = "null";
 
-static bool json_parse_pair(JsonPair *, char **);
-static bool json_parse_str(JsonStr *, char **);
-static bool json_parse_arr(JsonArr **, char **);
-static bool json_parse_val(JsonVal *, char **);
+static bool json_parse_pair(JsonPair *, const char **);
+static bool json_parse_str(JsonStr *, const char **);
+static bool json_parse_arr(JsonArr **, const char **);
+static bool json_parse_val(JsonVal *, const char **);
 
-static void json_skip_whitespace(char **ptr) {
+static void json_skip_whitespace(const char **ptr) {
   while (isspace((unsigned char)**ptr))
     (*ptr)++;
 }
 
-bool json_parse_obj(JsonObj **res, char **text) {
+bool json_parse_obj(JsonObj **res, const char **text) {
   *res = malloc(sizeof(JsonObj));
   (*res)->pairs = NULL;
   (*res)->len = 0;
@@ -61,12 +61,12 @@ bool json_parse_obj(JsonObj **res, char **text) {
   return true;
 }
 
-static bool json_parse_str(JsonStr *str, char **text) {
+static bool json_parse_str(JsonStr *str, const char **text) {
   str->needs_dealloc = false;
   if (**text != '"')
     return false;
 
-  str->start = ++*text;
+  str->start = (char *)++*text;
   bool esc = false;
   bool needs_decoding = false;
   for (;; (*text)++) {
@@ -84,7 +84,8 @@ static bool json_parse_str(JsonStr *str, char **text) {
 
   str->needs_dealloc = needs_decoding;
   if (needs_decoding) {
-    if (!json_decode_str(&str->start, &str->len, str->start, str->len))
+    if (!json_decode_str((const char **)&str->start, &str->len, str->start,
+                         str->len))
       return false;
   }
 
@@ -95,7 +96,7 @@ static bool json_parse_str(JsonStr *str, char **text) {
   return true;
 }
 
-static bool json_parse_pair(JsonPair *res, char **text) {
+static bool json_parse_pair(JsonPair *res, const char **text) {
   // Initialize res->value for errorprone freeing
   res->value.type = JSON_TYPE_NUL;
 
@@ -115,7 +116,7 @@ static bool json_parse_pair(JsonPair *res, char **text) {
   return true;
 }
 
-static bool json_parse_arr(JsonArr **res, char **text) {
+static bool json_parse_arr(JsonArr **res, const char **text) {
   *res = malloc(sizeof(JsonArr));
   (*res)->values = NULL;
   (*res)->len = 0;
@@ -161,7 +162,7 @@ typedef enum {
   NUM_INV,
 } NumResult;
 
-static NumResult is_fractional(char *text) {
+static NumResult is_fractional(const char *text) {
   if (*text == '-')
     text++;
   if (*text == '0' && isdigit((unsigned char)*(text + 1)))
@@ -179,7 +180,7 @@ static NumResult is_fractional(char *text) {
   return NUM_INT;
 }
 
-static bool json_parse_val(JsonVal *res, char **text) {
+static bool json_parse_val(JsonVal *res, const char **text) {
   res->type = JSON_TYPE_NUL;
   if (**text == '"') {
     res->as.str_ptr = malloc(sizeof(JsonStr));
@@ -282,9 +283,9 @@ static size_t utf8_encode(uint32_t cp, char out[4]) {
   }
 }
 
-bool json_decode_str(char **res, size_t *res_len, char *src, size_t len) {
+bool json_decode_str(const char **res, size_t *res_len, char *src, size_t len) {
   *res = malloc(len);
-  char *cur = *res;
+  char *cur = (char *)*res;
   const char *end = src + len;
 
   while (src < end) {

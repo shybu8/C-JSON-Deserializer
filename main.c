@@ -17,7 +17,7 @@ int main(void) {
 
   float st = (float)clock() / CLOCKS_PER_SEC;
   // assert(json_parse_obj(&obj, &f_content));
-  json_parse_obj(&obj, &f_content);
+  json_parse_obj(&obj, (const char **)&f_content);
   float et = (float)clock() / CLOCKS_PER_SEC;
   float dt = et - st;
   printf("Delta time is %f\n", dt);
