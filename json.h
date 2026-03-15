@@ -56,3 +56,39 @@ void json_free_val(JsonVal *);
 bool json_decode_str(const char **, size_t *, char *, size_t);
 
 JsonVal *json_value_by_key(JsonObj *, char *);
+
+typedef struct {
+  bool minimal;
+  size_t indentation_level;
+  char *indentation_str;
+} JsonStyle;
+
+#define JSON_STYLE_MINIMAL                                                     \
+  {                                                                            \
+      .minimal = true,                                                         \
+      .indentation_level = 0,                                                  \
+      .indentation_str = "",                                                   \
+  }
+
+#define JSON_STYLE_PRETTY_PRINT_TABS                                           \
+  {                                                                            \
+      .minimal = false,                                                        \
+      .indentation_level = 0,                                                  \
+      .indentation_str = "\t",                                                 \
+  }
+
+#define JSON_STYLE_PRETTY_PRINT_DOUBLESPACES                                   \
+  {                                                                            \
+      .minimal = false,                                                        \
+      .indentation_level = 0,                                                  \
+      .indentation_str = "  ",                                                 \
+  }
+
+#define JSON_STYLE_PRETTY_PRINT_FOURSPACES                                     \
+  {                                                                            \
+      .minimal = false,                                                        \
+      .indentation_level = 0,                                                  \
+      .indentation_str = "  ",                                                 \
+  }
+
+void json_serialize_val(JsonVal *, char **, size_t *, JsonStyle *style);

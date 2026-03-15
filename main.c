@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -20,14 +21,28 @@ int main(void) {
   json_parse_val(&val, (const char **)&f_content);
   float et = (float)clock() / CLOCKS_PER_SEC;
   float dt = et - st;
-  printf("Delta time is %f\n", dt);
+  printf("Deserialization delta time is %f\n", dt);
 
-  printf("Value is %d\n", val.type);
-  if (val.type == JSON_TYPE_OBJ) {
-    JsonVal *found = json_value_by_key(val.as.obj_ptr, "1");
-    if (found && found->type == JSON_TYPE_STR)
-      printf("%.*s\n", (int)found->as.str_ptr->len, found->as.str_ptr->start);
-  }
+  // printf("Value is %d\n", val.type);
+  // if (val.type == JSON_TYPE_OBJ) {
+  //   JsonVal *found = json_value_by_key(val.as.obj_ptr, "1");
+  //   if (found && found->type == JSON_TYPE_STR)
+  //     printf("%.*s\n", (int)found->as.str_ptr->len,
+  //     found->as.str_ptr->start);
+  // }
+
+  st = (float)clock() / CLOCKS_PER_SEC;
+  char *buf = malloc(1);
+  *buf = '\0';
+  size_t buf_len = strlen(buf);
+  JsonStyle style = JSON_STYLE_PRETTY_PRINT_FOURSPACES;
+  json_serialize_val(&val, &buf, &buf_len, &style);
+  et = (float)clock() / CLOCKS_PER_SEC;
+  dt = et - st;
+  printf("Serialization delta time is %f\n", dt);
+  // printf("%s\n", buf);
+  printf("%ld\n", strlen(buf));
+  free(buf);
 
   st = (float)clock() / CLOCKS_PER_SEC;
   json_free_val(&val);
