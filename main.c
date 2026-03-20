@@ -32,15 +32,16 @@ int main(void) {
   // }
 
   st = (float)clock() / CLOCKS_PER_SEC;
-  char *buf = malloc(1);
+  size_t buf_len = 1;
+  char *buf = malloc(buf_len);
   *buf = '\0';
-  size_t buf_len = strlen(buf);
-  JsonStyle style = JSON_STYLE_PRETTY_PRINT_FOURSPACES;
-  json_serialize_val(&val, &buf, &buf_len, &style);
+  size_t str_len = strlen(buf);
+  JsonStyle style = JSON_STYLE_MINIMAL;
+  json_serialize_val(&val, &buf, &str_len, &buf_len, &style);
   et = (float)clock() / CLOCKS_PER_SEC;
   dt = et - st;
   printf("Serialization delta time is %f\n", dt);
-  // printf("%s\n", buf);
+  printf("%s\n", buf);
   printf("%ld\n", strlen(buf));
   free(buf);
 

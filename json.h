@@ -88,7 +88,8 @@ typedef struct {
   {                                                                            \
       .minimal = false,                                                        \
       .indentation_level = 0,                                                  \
-      .indentation_str = "  ",                                                 \
+      .indentation_str = "    ",                                               \
   }
 
-void json_serialize_val(JsonVal *, char **, size_t *, JsonStyle *style);
+void json_serialize_val(JsonVal *, char **, size_t *, size_t *,
+                        JsonStyle *style);

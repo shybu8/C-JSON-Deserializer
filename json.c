@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define INTERNAL_BUF_SIZE 128
+#define INITIAL_REALLOC_INCREMENT 128
 
 static char TRUE_STR[] = "true";
 static char FALSE_STR[] = "false";
@@ -419,107 +420,131 @@ JsonVal *json_value_by_key(JsonObj *obj, char *to_find) {
 }
 
 static char internal_buf[INTERNAL_BUF_SIZE];
+static size_t realloc_increment = INITIAL_REALLOC_INCREMENT;
 
-static void cstr_append(char **base, size_t *base_len, char *postfix) {
-  size_t old_base_len = *base_len;
-  *base_len += strlen(postfix);
-  *base = realloc(*base, *base_len + 1);
-  strcpy(*base + old_base_len, postfix);
+static void establish_buf_len(char **buf, size_t *buf_len, size_t target_len) {
+  if (*buf_len < target_len) {
+    do {
+      *buf_len += realloc_increment;
+      realloc_increment *= 2;
+    } while (*buf_len < target_len);
+    *buf = realloc(*buf, *buf_len);
+  }
 }
 
-static void append_indent_level(char **str, size_t *str_len, JsonStyle *style) {
+static void cstr_append(char **str, size_t *str_len, size_t *buf_len,
+                        char *postfix) {
+  size_t old_base_len = *str_len;
+  size_t postfix_len = strlen(postfix);
+  *str_len += postfix_len;
+  establish_buf_len(str, buf_len, *str_len + 1);
+  memcpy(*str + old_base_len, postfix, postfix_len + 1);
+}
+
+static void append_indent_level(char **str, size_t *str_len, size_t *buf_len,
+                                JsonStyle *style) {
   for (size_t i = 0; i < style->indentation_level; i++)
-    cstr_append(str, str_len, style->indentation_str);
+    cstr_append(str, str_len, buf_len, style->indentation_str);
 }
 
-static void json_serialize_jsonstr(JsonStr *json_str, char **buf,
-                                   size_t *buf_len) {
-  size_t old_buf_len = *buf_len;
-  *buf_len += json_str->len + 2; // + ""
-  *buf = realloc(*buf, *buf_len + 1);
-  (*buf)[old_buf_len] = '"';
-  strncpy(*buf + old_buf_len + 1, json_str->start, json_str->len);
-  (*buf)[old_buf_len + json_str->len + 1] = '"';
-  (*buf)[old_buf_len + json_str->len + 2] = '\0';
+static void json_serialize_jsonstr(JsonStr *json_str, char **str,
+                                   size_t *str_len, size_t *buf_len) {
+  size_t old_str_len = *str_len;
+  *str_len += json_str->len + 2; // + ""
+  establish_buf_len(str, buf_len, *str_len + 1);
+  (*str)[old_str_len] = '"';
+  memcpy(*str + old_str_len + 1, json_str->start, json_str->len);
+  (*str)[old_str_len + json_str->len + 1] = '"';
+  (*str)[old_str_len + json_str->len + 2] = '\0';
 }
+
+static void _json_serialize_val(JsonVal *val, char **str, size_t *str_len,
+                                size_t *buf_len, JsonStyle *style);
 
 static void json_serialize_pair(JsonPair *pair, char **str, size_t *str_len,
-                                JsonStyle *style) {
-  json_serialize_jsonstr(&pair->key, str, str_len);
-  cstr_append(str, str_len, style->minimal ? ":" : ": ");
-  json_serialize_val(&pair->value, str, str_len, style);
+                                size_t *buf_len, JsonStyle *style) {
+  json_serialize_jsonstr(&pair->key, str, str_len, buf_len);
+  cstr_append(str, str_len, buf_len, style->minimal ? ":" : ": ");
+  _json_serialize_val(&pair->value, str, str_len, buf_len, style);
 }
 
 static void json_serialize_obj(JsonObj *obj, char **str, size_t *str_len,
-                               JsonStyle *style) {
-  cstr_append(str, str_len, "{");
+                               size_t *buf_len, JsonStyle *style) {
+  cstr_append(str, str_len, buf_len, "{");
   if (!style->minimal) {
     style->indentation_level += 1;
-    cstr_append(str, str_len, "\n");
+    cstr_append(str, str_len, buf_len, "\n");
   }
   for (size_t i = 0; i < obj->len; i++) {
     if (!style->minimal)
-      append_indent_level(str, str_len, style);
-    json_serialize_pair(&obj->pairs[i], str, str_len, style);
+      append_indent_level(str, str_len, buf_len, style);
+    json_serialize_pair(&obj->pairs[i], str, str_len, buf_len, style);
     if (i != obj->len - 1)
-      cstr_append(str, str_len, style->minimal ? "," : ",\n");
+      cstr_append(str, str_len, buf_len, style->minimal ? "," : ",\n");
   }
   if (!style->minimal) {
     style->indentation_level -= 1;
-    cstr_append(str, str_len, "\n");
-    append_indent_level(str, str_len, style);
+    cstr_append(str, str_len, buf_len, "\n");
+    append_indent_level(str, str_len, buf_len, style);
   }
-  cstr_append(str, str_len, "}");
+  cstr_append(str, str_len, buf_len, "}");
 }
 
 static void json_serialize_arr(JsonArr *arr, char **str, size_t *str_len,
-                               JsonStyle *style) {
-  cstr_append(str, str_len, "[");
+                               size_t *buf_len, JsonStyle *style) {
+  cstr_append(str, str_len, buf_len, "[");
   if (!style->minimal) {
     style->indentation_level += 1;
-    cstr_append(str, str_len, "\n");
+    cstr_append(str, str_len, buf_len, "\n");
   }
   for (size_t i = 0; i < arr->len; i++) {
     if (!style->minimal)
-      append_indent_level(str, str_len, style);
-    json_serialize_val(&arr->values[i], str, str_len, style);
+      append_indent_level(str, str_len, buf_len, style);
+    _json_serialize_val(&arr->values[i], str, str_len, buf_len, style);
     if (i != arr->len - 1)
-      cstr_append(str, str_len, style->minimal ? "," : ",\n");
+      cstr_append(str, str_len, buf_len, style->minimal ? "," : ",\n");
   }
   if (!style->minimal) {
     style->indentation_level -= 1;
-    cstr_append(str, str_len, "\n");
-    append_indent_level(str, str_len, style);
+    cstr_append(str, str_len, buf_len, "\n");
+    append_indent_level(str, str_len, buf_len, style);
   }
-  cstr_append(str, str_len, "]");
+  cstr_append(str, str_len, buf_len, "]");
 }
 
-void json_serialize_val(JsonVal *val, char **str, size_t *str_len,
-                        JsonStyle *style) {
+static void _json_serialize_val(JsonVal *val, char **str, size_t *str_len,
+                                size_t *buf_len, JsonStyle *style) {
   switch (val->type) {
   case JSON_TYPE_OBJ:
-    json_serialize_obj(val->as.obj_ptr, str, str_len, style);
+    json_serialize_obj(val->as.obj_ptr, str, str_len, buf_len, style);
     break;
   case JSON_TYPE_ARR:
-    json_serialize_arr(val->as.arr_ptr, str, str_len, style);
+    json_serialize_arr(val->as.arr_ptr, str, str_len, buf_len, style);
     break;
   case JSON_TYPE_STR:
     // TODO: Encode json-strings
-    json_serialize_jsonstr(val->as.str_ptr, str, str_len);
+    json_serialize_jsonstr(val->as.str_ptr, str, str_len, buf_len);
     break;
   case JSON_TYPE_INT:
     snprintf(internal_buf, sizeof(internal_buf), "%lld", val->as.integer);
-    cstr_append(str, str_len, internal_buf);
+    cstr_append(str, str_len, buf_len, internal_buf);
     break;
   case JSON_TYPE_FRC:
     snprintf(internal_buf, sizeof(internal_buf), "%lf", val->as.fract);
-    cstr_append(str, str_len, internal_buf);
+    cstr_append(str, str_len, buf_len, internal_buf);
     break;
   case JSON_TYPE_BOL:
-    cstr_append(str, str_len, val->as.boolean ? "true" : "false");
+    cstr_append(str, str_len, buf_len, val->as.boolean ? "true" : "false");
     break;
   case JSON_TYPE_NUL:
-    cstr_append(str, str_len, "null");
+    cstr_append(str, str_len, buf_len, "null");
     break;
   }
+}
+
+void json_serialize_val(JsonVal *val, char **str, size_t *str_len,
+                        size_t *buf_len, JsonStyle *style) {
+  size_t initial_realloc_increment = realloc_increment;
+  _json_serialize_val(val, str, str_len, buf_len, style);
+  realloc_increment = initial_realloc_increment;
 }
