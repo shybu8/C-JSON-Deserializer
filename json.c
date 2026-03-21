@@ -548,3 +548,98 @@ void json_serialize_val(JsonVal *val, char **str, size_t *str_len,
   _json_serialize_val(val, str, str_len, buf_len, style);
   realloc_increment = initial_realloc_increment;
 }
+
+bool json_str_needs_encoding(const char *str, size_t *res_buf_size) {
+  size_t i = 0;
+  bool needs_encoding = false;
+  *res_buf_size = 0;
+
+  while (str[i] != '\0') {
+    unsigned char c = (unsigned char)str[i];
+    switch (c) {
+    case '"':
+    case '\\':
+    case '\b':
+    case '\f':
+    case '\n':
+    case '\t':
+    case '\r':
+      needs_encoding = true;
+      *res_buf_size += 2;
+      break;
+    default:
+      if (c < 0x20) {
+        needs_encoding = true;
+        *res_buf_size += 6;
+      } else
+        *res_buf_size += 1;
+      break;
+    }
+    i++;
+  }
+
+  *res_buf_size += 1; // + \0
+  return needs_encoding;
+}
+
+void json_str_encode_into_buf(const char *str, char *buf) {
+  static const char hex[] = "0123456789ABCDEF";
+  size_t i = 0;
+  size_t buf_i = 0;
+
+  while (str[i] != '\0') {
+    unsigned char c = (unsigned char)str[i];
+    switch (c) {
+    case '"':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = '"';
+      buf_i += 2;
+      break;
+    case '\\':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = '\\';
+      buf_i += 2;
+      break;
+    case '\b':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = 'b';
+      buf_i += 2;
+      break;
+    case '\f':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = 'f';
+      buf_i += 2;
+      break;
+    case '\n':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = 'n';
+      buf_i += 2;
+      break;
+    case '\t':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = 't';
+      buf_i += 2;
+      break;
+    case '\r':
+      buf[buf_i] = '\\';
+      buf[buf_i + 1] = 'r';
+      buf_i += 2;
+      break;
+    default:
+      if (c < 0x20) {
+        buf[buf_i] = '\\';
+        buf[buf_i + 1] = 'u';
+        buf[buf_i + 2] = '0';
+        buf[buf_i + 3] = '0';
+        buf[buf_i + 4] = hex[(c >> 4) & 0x0F];
+        buf[buf_i + 5] = hex[c & 0x0F];
+        buf_i += 6;
+      } else {
+        buf[buf_i] = str[i];
+        buf_i++;
+      }
+    }
+    i++;
+  }
+  buf[buf_i] = '\0';
+}

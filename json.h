@@ -93,3 +93,7 @@ typedef struct {
 
 void json_serialize_val(JsonVal *, char **, size_t *, size_t *,
                         JsonStyle *style);
+
+bool json_str_needs_encoding(const char *str, size_t *res_buf_size);
+
+void json_str_encode_into_buf(const char *str, char *buf);

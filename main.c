@@ -53,5 +53,17 @@ int main(void) {
 
   free(f_alloc);
 
+  char *res;
+  char *str = "line1"
+              "\x1F"
+              "\nline2";
+  size_t buf_size;
+  if (json_str_needs_encoding(str, &buf_size)) {
+    res = malloc(buf_size);
+    json_str_encode_into_buf(str, res);
+    printf("%s\n", res);
+    free(res);
+  }
+
   return 0;
 }
