@@ -18,7 +18,6 @@ static char NULL_STR[] = "null";
 static bool json_parse_pair(JsonPair *, const char **);
 static bool json_parse_str(JsonStr *, const char **);
 static bool json_parse_arr(JsonArr **, const char **);
-// bool json_parse_val(JsonVal *, const char **);
 
 static void json_skip_whitespace(const char **ptr) {
   while (isspace((unsigned char)**ptr))
@@ -287,7 +286,8 @@ static size_t utf8_encode(uint32_t cp, char out[4]) {
   }
 }
 
-bool json_decode_str(const char **res, size_t *res_len, char *src, size_t len) {
+bool json_decode_str(const char **res, size_t *res_len, const char *src,
+                     size_t len) {
   *res = malloc(len);
   char *cur = (char *)*res;
   const char *end = src + len;
@@ -380,7 +380,7 @@ void json_free_val(JsonVal *val) {
     break;
   case JSON_TYPE_STR:
     if (val->as.str_ptr->needs_dealloc)
-      free(val->as.str_ptr->start);
+      free((void *)val->as.str_ptr->start);
     free(val->as.str_ptr);
     break;
   case JSON_TYPE_NUL:
@@ -394,7 +394,7 @@ void json_free_val(JsonVal *val) {
 static void json_free_obj(JsonObj *obj) {
   for (size_t i = 0; i < obj->len; i++) {
     if (obj->pairs[i].key.needs_dealloc)
-      free(obj->pairs[i].key.start);
+      free((void *)obj->pairs[i].key.start);
     json_free_val(&obj->pairs[i].value);
   }
   free(obj->pairs);

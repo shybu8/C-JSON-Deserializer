@@ -19,7 +19,7 @@ typedef struct JsonVal JsonVal;
 typedef struct JsonPair JsonPair;
 
 struct JsonStr {
-  char *start;
+  const char *start;
   size_t len;
   bool needs_dealloc;
 };
@@ -51,11 +51,12 @@ struct JsonArr {
   size_t len;
 };
 
-bool json_parse_val(JsonVal *, const char **);
-void json_free_val(JsonVal *);
-bool json_decode_str(const char **, size_t *, char *, size_t);
+bool json_parse_val(JsonVal *res, const char **text);
+void json_free_val(JsonVal *val);
+bool json_decode_str(const char **res, size_t *res_len, const char *src,
+                     size_t len);
 
-JsonVal *json_value_by_key(JsonObj *, char *);
+JsonVal *json_value_by_key(JsonObj *obj, char *to_find);
 
 typedef struct {
   bool minimal;
@@ -91,8 +92,8 @@ typedef struct {
       .indentation_str = "    ",                                               \
   }
 
-void json_serialize_val(JsonVal *, char **, size_t *, size_t *,
-                        JsonStyle *style);
+void json_serialize_val(JsonVal *val, char **str, size_t *str_len,
+                        size_t *buf_len, JsonStyle *style);
 
 bool json_str_needs_encoding(const char *str, size_t *res_buf_size);
 
