@@ -21,7 +21,7 @@ int main(void) {
   json_parse_val(&val, (const char **)&f_content);
   float et = (float)clock() / CLOCKS_PER_SEC;
   float dt = et - st;
-  printf("Deserialization delta time is %f\n", dt);
+  printf("Deserialization delta time is %f seconds\n", dt);
 
   // printf("Value is %d\n", val.type);
   // if (val.type == JSON_TYPE_OBJ) {
@@ -40,30 +40,28 @@ int main(void) {
   json_serialize_val(&val, &buf, &str_len, &buf_len, &style);
   et = (float)clock() / CLOCKS_PER_SEC;
   dt = et - st;
-  printf("Serialization delta time is %f\n", dt);
-  printf("%s\n", buf);
-  printf("%ld\n", strlen(buf));
+  printf("Serialization delta time is %f seconds\n", dt);
   free(buf);
 
   st = (float)clock() / CLOCKS_PER_SEC;
   json_free_val(&val);
   et = (float)clock() / CLOCKS_PER_SEC;
   dt = et - st;
-  printf("Freeing delta time is %f\n", dt);
+  printf("Freeing delta time is %f seconds\n", dt);
 
   free(f_alloc);
 
-  char *res;
-  char *str = "line1"
-              "\x1F"
-              "\nline2";
-  size_t buf_size;
-  if (json_str_needs_encoding(str, &buf_size)) {
-    res = malloc(buf_size);
-    json_str_encode_into_buf(str, res);
-    printf("%s\n", res);
-    free(res);
-  }
+  // char *res;
+  // char *str = "line1"
+  //             "\x1F"
+  //             "\nline2";
+  // size_t buf_size;
+  // if (json_str_needs_encoding(str, &buf_size)) {
+  //   res = malloc(buf_size);
+  //   json_str_encode_into_buf(str, res);
+  //   printf("%s\n", res);
+  //   free(res);
+  // }
 
   return 0;
 }
