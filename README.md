@@ -42,7 +42,7 @@ int main(void) {
   JsonVal val;
   if (!json_parse_val(&val, (const char **)&f_content)) {
     printf("Произошла ошибка десериализации на символе: %c\n", *f_content);
-    json_free_val(&val);
+    json_free_val(&val); // При возниковении ошибки объекты гарантированно корректны для выполнения очистки
   }
 
   // Сериализация (со стилем с табами)
@@ -58,5 +58,15 @@ int main(void) {
 }
 ```
 
-<!-- ## Тестирование производительности -->
+## Тестирование производительности
+Было выполнено тестирование производительнсоти с помощью десериализации и сериализации [Json-файла размером 1GB](https://github.com/antonmedv/json-examples/blob/master/data_1gb.json).
+Программа была скомпилированна с флагом оптимизации `-O2`.
 
+### Время десериализации и сериализации
+![serde-timings](./docs/images/timings.png)
+
+### Вывод `perf report`
+![perf-report](./docs/images/perf-report.png)
+
+### Вывод `perf stat`
+![perf-stat](./docs/images/perf-stat.png)
