@@ -413,7 +413,8 @@ JsonVal *json_value_by_key(JsonObj *obj, const char *to_find) {
   JsonStr *key_str;
   for (size_t i = 0; i < obj->len; i++) {
     key_str = &obj->pairs[i].key;
-    if (0 == strncmp(to_find, key_str->start, key_str->len))
+    if (strlen(to_find) == key_str->len &&
+        0 == strncmp(to_find, key_str->start, key_str->len))
       return &obj->pairs[i].value;
   }
   return NULL;
