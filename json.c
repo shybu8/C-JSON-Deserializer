@@ -522,7 +522,6 @@ static void _json_serialize_val(JsonVal *val, char **str, size_t *str_len,
     json_serialize_arr(val->as.arr_ptr, str, str_len, buf_len, style);
     break;
   case JSON_TYPE_STR:
-    // TODO: Encode json-strings
     json_serialize_jsonstr(val->as.str_ptr, str, str_len, buf_len);
     break;
   case JSON_TYPE_INT:
