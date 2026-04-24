@@ -56,7 +56,7 @@ void json_free_val(JsonVal *val);
 bool json_decode_str(const char **res, size_t *res_len, const char *src,
                      size_t len);
 
-JsonVal *json_value_by_key(JsonObj *obj, char *to_find);
+JsonVal *json_value_by_key(JsonObj *obj, const char *to_find);
 
 typedef struct {
   bool minimal;

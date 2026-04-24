@@ -409,7 +409,7 @@ static void json_free_arr(JsonArr *arr) {
   free(arr);
 }
 
-JsonVal *json_value_by_key(JsonObj *obj, char *to_find) {
+JsonVal *json_value_by_key(JsonObj *obj, const char *to_find) {
   JsonStr *key_str;
   for (size_t i = 0; i < obj->len; i++) {
     key_str = &obj->pairs[i].key;
